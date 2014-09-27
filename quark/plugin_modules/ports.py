@@ -34,6 +34,15 @@ LOG = logging.getLogger(__name__)
 STRATEGY = network_strategy.STRATEGY
 
 
+# HACK(amir): RM9305: do not allow a tenant to associate a network to a port
+# that does not belong to them unless it is publicnet or servicenet
+def _raise_if_unauthorized(tenant_id, net):
+    rax_networks = ('00000000-0000-0000-0000-000000000000',
+                    '11111111-1111-1111-1111-111111111111')
+    if net["id"] not in rax_networks and net["tenant_id"] != tenant_id:
+        raise exceptions.NotAuthorized()
+
+
 def create_port(context, port):
     """Create a port
 
@@ -65,6 +74,7 @@ def create_port(context, port):
 
     if not net:
         raise exceptions.NetworkNotFound(net_id=net_id)
+    _raise_if_unauthorized(context.tenant_id, net)
 
     # NOTE (Perkins): If a device_id is given, try to prevent multiple ports
     # from being created for a device already attached to the network

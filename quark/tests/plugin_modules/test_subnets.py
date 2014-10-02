@@ -1165,7 +1165,6 @@ class TestSubnetsQuotas(test_quark_plugin.TestQuarkPlugin):
                                   "QUOTAS")
 
 
-
 class TestSubnetsNotification(test_quark_plugin.TestQuarkPlugin):
     @contextlib.contextmanager
     def _stubs(self, s, deleted_at=None):

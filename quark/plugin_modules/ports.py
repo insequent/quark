@@ -119,6 +119,8 @@ def create_port(context, port):
     with utils.CommandManager().execute() as cmd_mgr:
         @cmd_mgr.do
         def _allocate_ips(fixed_ips, net, port_id, segment_id, mac):
+            ips = []
+            subnets = []
             if fixed_ips:
                 for fixed_ip in fixed_ips:
                     subnet_id = fixed_ip.get("subnet_id")
@@ -127,11 +129,14 @@ def create_port(context, port):
                         raise exceptions.BadRequest(
                             resource="fixed_ips",
                             msg="subnet_id and ip_address required")
-                    ipam_driver.allocate_ip_address(
-                        context, addresses, net["id"], port_id,
-                        CONF.QUARK.ipam_reuse_after, segment_id=segment_id,
-                        ip_address=ip_address, subnets=[subnet_id],
-                        mac_address=mac)
+                    ips.append(ip_address)
+                    subnets.append(subnet_id)
+
+                ipam_driver.allocate_ip_address(
+                    context, addresses, net["id"], port_id,
+                    CONF.QUARK.ipam_reuse_after, segment_id=segment_id,
+                    ip_addresses=ips, subnets=subnets,
+                    mac_address=mac)
             else:
                 ipam_driver.allocate_ip_address(
                     context, addresses, net["id"], port_id,
@@ -296,7 +301,7 @@ def update_port(context, id, port):
             if ip in ip_addresses:
                 ipam_driver.allocate_ip_address(
                     context, addresses, port_db["network_id"],
-                    port_db["id"], reuse_after=None, ip_address=ip,
+                    port_db["id"], reuse_after=None, ip_addresses=[ip],
                     subnets=[ip_addresses[ip]])
 
         for ip in ips_to_deallocate:
@@ -373,7 +378,7 @@ def post_update_port(context, id, port):
                         address = ipam_driver.allocate_ip_address(
                             context, port_db["network_id"], id,
                             CONF.QUARK.ipam_reuse_after,
-                            ip_address=ip_address)
+                            ip_addresses=[ip_address])
             else:
                 address = ipam_driver.allocate_ip_address(
                     context, port_db["network_id"], id,

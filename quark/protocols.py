@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import netaddr
 from neutron.common import exceptions
 from neutron.extensions import securitygroup as sg_ext
 from neutron.openstack.common import log as logging
@@ -97,6 +98,18 @@ def human_readable_protocol(protocol, ethertype):
         return
     proto = translate_protocol(protocol, ethertype)
     return REVERSE_PROTOCOLS[proto]
+
+
+def validate_remote_ip_prefix(ethertype, prefix):
+    if prefix:
+        net = netaddr.IPNetwork(prefix)
+        if ((ethertype == ETHERTYPES["IPv4"] and net.version == 6) or
+                (ethertype == ETHERTYPES["IPv6"] and net.version == 4)):
+                human_ether = human_readable_ethertype(ethertype)
+                raise exceptions.InvalidInput(
+                    error_message="Etherytype %s does not match "
+                                  "remote_ip_prefix, which is IP version %s" %
+                                  (human_ether, net.version))
 
 
 def validate_protocol_with_port_ranges(protocol, port_range_min,

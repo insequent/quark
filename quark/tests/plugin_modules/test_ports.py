@@ -532,7 +532,7 @@ class TestQuarkCreatePort(test_quark_plugin.TestQuarkPlugin):
                 self.plugin.create_port(self.context, port)
 
     def test_create_port_security_groups_raises(self, groups=[1]):
-        network = dict(id=1)
+        network = dict(id=1, tenant_id=self.context.tenant_id)
         mac = dict(address="AA:BB:CC:DD:EE:FF")
         port_name = "foobar"
         ip = dict()

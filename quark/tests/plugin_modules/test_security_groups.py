@@ -315,11 +315,26 @@ class TestQuarkCreateSecurityGroupRule(test_quark_plugin.TestQuarkPlugin):
         self._test_create_security_rule(remote_ip_prefix='192.168.0.1')
 
     def test_create_security_rule_remote_group(self):
-        self._test_create_security_rule(remote_group_id=2)
+        with self.assertRaises(exceptions.InvalidInput):
+            self._test_create_security_rule(remote_group_id=2)
 
     def test_create_security_rule_port_range_invalid_ranges_fails(self):
         with self.assertRaises(exceptions.InvalidInput):
             self._test_create_security_rule(protocol=6, port_range_min=0)
+
+    def test_create_security_rule_min_under_port_min(self):
+        with self.assertRaises(exceptions.InvalidInput):
+            self._test_create_security_rule(protocol=6, port_range_min=-1,
+                                            port_range_max=10)
+
+    def test_create_security_rule_egress_raises(self):
+        with self.assertRaises(exceptions.InvalidInput):
+            self._test_create_security_rule(protocol=6, direction="egress")
+
+    def test_create_security_rule_max_over_port_max(self):
+        with self.assertRaises(exceptions.InvalidInput):
+            self._test_create_security_rule(protocol=6, port_range_min=0,
+                                            port_range_max=65537)
 
     def test_create_security_rule_remote_conflicts(self):
         with self.assertRaises(Exception):  # noqa
@@ -428,3 +443,19 @@ class TestQuarkProtocolHandling(test_quark_plugin.TestQuarkPlugin):
     def test_translate_protocol_invalid_ethertype(self):
         with self.assertRaises(q_exc.InvalidEthertype):
             protocols.translate_protocol(256, "IPv7")
+
+    def test_validate_remote_ip_prefix(self):
+        try:
+            protocols.validate_remote_ip_prefix(0x800, "192.168.0.0/24")
+        except Exception:
+            self.fail("Should not have raised")
+
+    def test_validate_remote_ip_prefix_no_prefix_does_nothing(self):
+        try:
+            protocols.validate_remote_ip_prefix(0x800, None)
+        except Exception:
+            self.fail("Should not have raised")
+
+    def test_validate_remote_ip_prefix_ethertype_remote_net_conflict(self):
+        with self.assertRaises(exceptions.InvalidInput):
+            protocols.validate_remote_ip_prefix(0x86DD, "192.168.0.0/24")

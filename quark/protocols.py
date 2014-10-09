@@ -13,6 +13,7 @@
 #    License for the specific language governing permissions and limitations
 #    under the License.
 
+import netaddr
 from neutron.common import exceptions
 from neutron.extensions import securitygroup as sg_ext
 from neutron.openstack.common import log as logging
@@ -52,6 +53,8 @@ MIN_PROTOCOL = 0
 MAX_PROTOCOL = 255
 REVERSE_PROTOCOLS = {}
 REVERSE_ETHERTYPES = {}
+MIN_PORT = 0
+MAX_PORT = 65535
 
 
 def _is_allowed(protocol, ethertype):
@@ -97,23 +100,41 @@ def human_readable_protocol(protocol, ethertype):
     return REVERSE_PROTOCOLS[proto]
 
 
+def validate_remote_ip_prefix(ethertype, prefix):
+    if prefix:
+        net = netaddr.IPNetwork(prefix)
+        if ((ethertype == ETHERTYPES["IPv4"] and net.version == 6) or
+                (ethertype == ETHERTYPES["IPv6"] and net.version == 4)):
+                human_ether = human_readable_ethertype(ethertype)
+                raise exceptions.InvalidInput(
+                    error_message="Etherytype %s does not match "
+                                  "remote_ip_prefix, which is IP version %s" %
+                                  (human_ether, net.version))
+
+
 def validate_protocol_with_port_ranges(protocol, port_range_min,
                                        port_range_max):
     if protocol in ALLOWED_WITH_RANGE:
-        # TODO(mdietz) Allowed with range makes little sense. TCP without
-        #              a port range means what, exactly?
+        # TODO(anyone): what exactly is a TCP or UDP rule without ports?
         if (port_range_min is None) != (port_range_max is None):
             raise exceptions.InvalidInput(
                 error_message="For TCP/UDP rules, port_range_min and"
                               "port_range_max must either both be supplied, "
                               "or neither of them")
+
         if port_range_min is not None and port_range_max is not None:
             if port_range_min > port_range_max:
                 raise sg_ext.SecurityGroupInvalidPortRange()
+
+            if port_range_min < MIN_PORT or port_range_max > MAX_PORT:
+                raise exceptions.InvalidInput(
+                    error_message="port_range_min and port_range_max must be "
+                                  ">= %s and <= %s" % (MIN_PORT, MAX_PORT))
     else:
-        raise exceptions.InvalidInput(
-            error_message=("You may not supply ports for the requested "
-                           "protocol"))
+        if port_range_min or port_range_max:
+            raise exceptions.InvalidInput(
+                error_message=("You may not supply ports for the requested "
+                               "protocol"))
 
 
 def _init_protocols():

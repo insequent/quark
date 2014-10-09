@@ -8,6 +8,7 @@ mysql-python
 aiclib
 gunicorn
 pymysql>=0.6.2
+redis==2.10.3
 
 # agent deps
 xenapi==1.2

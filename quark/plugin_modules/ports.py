@@ -362,11 +362,11 @@ def update_port(context, id, port):
             ipam_driver.deallocate_ips_by_port(
                 context, port_db, ip_address=ip)
 
-        for subnet_id in subnet_ids:
+        if subnet_ids:
             ipam_driver.allocate_ip_address(
                 context, addresses, port_db["network_id"], port_db["id"],
                 reuse_after=CONF.QUARK.ipam_reuse_after,
-                subnets=[subnet_id])
+                subnets=subnet_ids)
 
         # Need to return all existing addresses and the new ones
         if addresses:
